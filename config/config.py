@@ -19,6 +19,7 @@ class LockedApp:
     process_names: list[str]       # e.g. ["WhatsApp.exe", "WhatsApp.Root.exe"]
     launch_command: str            # shell:AppsFolder\... URI or path to EXE
     is_store_app: bool = True      # True for UWP/Store apps, False for desktop EXEs
+    pwa_app_id: str = ""           # Edge --app-id for PWA apps (empty = not a PWA)
 
 
 @dataclass
@@ -113,6 +114,7 @@ class AppConfig:
                     process_names=["msedge.exe"],
                     launch_command=r"shell:AppsFolder\Facebook.InstagramBeta_8xx8rvfyw5nnt!App",
                     is_store_app=True,
+                    pwa_app_id="akpamiohjfcnimfljfndmaldlcfphjmp",
                 ),
             ],
         )

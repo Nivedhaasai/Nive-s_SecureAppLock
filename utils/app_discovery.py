@@ -20,6 +20,7 @@ class DiscoveredApp:
     process_names: list[str]
     launch_command: str
     is_store_app: bool
+    pwa_app_id: str = ""           # Edge --app-id for PWA apps
 
     @property
     def sort_key(self) -> str:
@@ -60,11 +61,13 @@ _STORE_APP_OVERRIDES: dict[str, dict] = {
         "name": "Instagram",
         "extra_processes": ["msedge.exe"],
         "is_pwa": True,
+        "pwa_app_id": "akpamiohjfcnimfljfndmaldlcfphjmp",
     },
     "Facebook.Facebook": {
         "name": "Facebook",
         "extra_processes": ["msedge.exe"],
         "is_pwa": True,
+        "pwa_app_id": "mhnfclaomkfkepnljbglchmeipcdefka",
     },
 }
 
@@ -222,11 +225,14 @@ $results | ConvertTo-Json -Compress
             if not process_names:
                 continue
 
+            pwa_id = overrides.get("pwa_app_id", "")
+
             apps.append(DiscoveredApp(
                 name=display_name,
                 process_names=process_names,
                 launch_command=launch_cmd,
                 is_store_app=True,
+                pwa_app_id=pwa_id,
             ))
 
         return apps

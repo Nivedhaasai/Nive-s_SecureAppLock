@@ -119,13 +119,42 @@ class ProcessWatcher(QObject):
                 logger.info("App %s auto-relocked after 30-minute timeout.", app.name)
                 continue
             # Re-lock if the app has no visible window
-            if not self._has_visible_window(app.process_names):
+            if not self._has_visible_window(app):
                 self._silent_relock_times[app.name] = now
                 self.lock(app.name)
                 self._kill_silent(app)
                 logger.info("App %s closed - re-locked silently.", app.name)
 
     # -- internals ---------------------------------------------------------
+
+    def _find_matching_app(self, process_name: str, pid: int):
+        """
+        Find the LockedApp that matches a process name + PID.
+        For PWA apps (pwa_app_id set), also checks the command line
+        for --app-id= to avoid false matches on shared executables
+        like msedge.exe.
+        """
+        proc_lower = process_name.lower()
+        for app in self._config.locked_apps:
+            for pn in app.process_names:
+                if pn.lower() == proc_lower:
+                    if app.pwa_app_id:
+                        if self._is_pwa_match(pid, app.pwa_app_id):
+                            return app
+                    else:
+                        return app
+        return None
+
+    @staticmethod
+    def _is_pwa_match(pid: int, pwa_app_id: str) -> bool:
+        """Check if a process was launched with the given PWA --app-id."""
+        try:
+            proc = psutil.Process(pid)
+            cmdline = proc.cmdline()
+            target = f"--app-id={pwa_app_id}"
+            return any(target in arg for arg in cmdline)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            return False
 
     def _kill_silent(self, app) -> None:
         """
@@ -140,20 +169,38 @@ class ProcessWatcher(QObject):
             try:
                 pname = (proc.info["name"] or "").lower()
                 if pname in names_lower:
+                    # For PWA apps, only kill the process with the matching app-id
+                    if app.pwa_app_id:
+                        if not self._is_pwa_match(proc.info["pid"], app.pwa_app_id):
+                            continue
                     self._kill_process(app.name, pname, proc.info["pid"])
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
 
-    def _has_visible_window(self, process_names: list[str]) -> bool:
+    def _has_visible_window(self, app) -> bool:
         """
-        Return True if any process matching the given names has a visible,
-        titled top-level window on the desktop.
+        Return True if the app has a visible, titled top-level window.
 
-        This distinguishes between an app that is genuinely open (has a window)
-        and a background/tray process that persists after the user closes the app
-        (e.g. WhatsApp.Root.exe running with no window after WhatsApp is closed).
+        For PWA apps, checks that a matching msedge.exe process (with the
+        correct --app-id) is still running — since PWA windows close when
+        the user closes the app.  For normal apps, uses EnumWindows to
+        check for a visible window belonging to one of the process names.
         Falls back to True (assume visible) if win32gui is unavailable.
         """
+        process_names = app.process_names
+
+        # PWA shortcut: check if the PWA process is still alive
+        if app.pwa_app_id:
+            names_lower = {n.lower() for n in process_names}
+            for proc in psutil.process_iter(["name", "pid"]):
+                try:
+                    pname = (proc.info["name"] or "").lower()
+                    if pname in names_lower and self._is_pwa_match(proc.info["pid"], app.pwa_app_id):
+                        return True
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+            return False
+
         if not _WIN32GUI:
             # Fallback: just check process existence
             names_lower = {n.lower() for n in process_names}
@@ -308,9 +355,9 @@ class ProcessWatcher(QObject):
                 pname = (proc.info["name"] or "").lower()
                 if pname not in protected_names:
                     continue
-                app = self._config.find_app_by_process(pname)
+                pid = proc.info["pid"]
+                app = self._find_matching_app(pname, pid)
                 if app and app.name not in self._unlocked:
-                    pid = proc.info["pid"]
                     logger.info(
                         "Startup scan: found already-running %s (%s PID %d) - killing.",
                         app.name, pname, pid,
@@ -341,12 +388,12 @@ class ProcessWatcher(QObject):
                         pname = (proc.info["name"] or "").lower()
                         if pname not in protected_names:
                             continue
-                        app = self._config.find_app_by_process(pname)
+                        pid = proc.info["pid"]
+                        app = self._find_matching_app(pname, pid)
                         if app and app.name not in self._unlocked:
                             # Skip if within the launch grace period
                             if now - self._unlock_times.get(app.name, 0) < _GRACE:
                                 continue
-                            pid = proc.info["pid"]
                             self._kill_process(app.name, pname, pid)
                             # Suppress lock screen during background-process cleanup window
                             if now - self._silent_relock_times.get(app.name, 0) < _SUPPRESS:
@@ -367,7 +414,7 @@ class ProcessWatcher(QObject):
         if process_name not in protected_names:
             return
 
-        app = self._config.find_app_by_process(process_name)
+        app = self._find_matching_app(process_name, process_pid)
         if app and app.name not in self._unlocked:
             self._kill_process(app.name, process_name, process_pid)
             # Suppress lock screen during background-process cleanup window (2 s after silent re-lock)

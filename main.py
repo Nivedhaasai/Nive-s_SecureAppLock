@@ -246,6 +246,7 @@ class NiveSecureAppLockApp:
             process_names=app.process_names,
             launch_command=app.launch_command,
             is_store_app=app.is_store_app,
+            pwa_app_id=getattr(app, 'pwa_app_id', ''),
         )
         self._config.add_app(new_app)
         self._tray.showMessage(
