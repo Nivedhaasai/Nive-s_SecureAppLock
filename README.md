@@ -1,4 +1,4 @@
-# Nive'secureAppLock
+# Nive's_SecureAppLock
 
 A Windows desktop application locker that prevents unauthorized access to sensitive apps using Windows Hello biometric authentication (fingerprint/face) with PIN fallback. Built for real-world use — runs silently in the background, survives force-close attempts, and locks apps the instant they're opened.
 
@@ -6,7 +6,7 @@ A Windows desktop application locker that prevents unauthorized access to sensit
 
 ## About the Project
 
-Nive'secureAppLock is a privacy-first, enterprise-grade Windows application locker that brings mobile-style biometric app locking to the desktop. It intercepts protected applications at the process level the moment they launch, authenticates the user through Windows Hello (fingerprint or facial recognition), and only then allows the app to run. If someone kills it from Task Manager, a tamper-proof watchdog relaunches it within seconds. It starts silently at login, lives in the system tray, and requires zero configuration beyond an initial PIN setup.
+Nive's_SecureAppLock is a privacy-first, enterprise-grade Windows application locker that brings mobile-style biometric app locking to the desktop. It intercepts protected applications at the process level the moment they launch, authenticates the user through Windows Hello (fingerprint or facial recognition), and only then allows the app to run. If someone kills it from Task Manager, a tamper-proof watchdog relaunches it within seconds. It starts silently at login, lives in the system tray, and requires zero configuration beyond an initial PIN setup.
 
 The project is built with a hybrid Python + C# architecture — Python drives the desktop UI (PyQt6), real-time process monitoring (WMI + psutil), and configuration management, while a companion C# service bridges the gap to the native Windows Hello biometric API (`UserConsentVerifier`) that Python cannot access directly.
 
@@ -27,7 +27,7 @@ The deeper engineering motivation was the challenge itself — Windows actively 
 
 ---
 
-## What Makes This Different (Novelty)
+## What Makes This Different 
 
 | Aspect | Typical App Lockers | Nive'secureAppLock |
 |--------|--------------------|-----------------------|
@@ -61,12 +61,12 @@ The deeper engineering motivation was the challenge itself — Windows actively 
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                   main.py                        │
-│  App controller, single-instance mutex, watchdog │
+│                   main.py                       │
+│ App controller, single-instance mutex, watchdog │
 ├─────────┬──────────┬──────────┬─────────────────┤
-│  UI     │  Auth    │ Monitor  │    Config        │
-│ PyQt6   │ WinHello │   WMI    │   JSON-based     │
-│         │  bcrypt  │  psutil  │                  │
+│  UI     │  Auth    │ Monitor  │    Config       │
+│ PyQt6   │ WinHello │   WMI    │   JSON-based    │
+│         │  bcrypt  │  psutil  │                 │
 └────┬────┴────┬─────┴────┬─────┴─────────────────┘
      │         │          │
      │    ┌────▼─────┐    │
@@ -308,4 +308,4 @@ MIT — see [LICENSE](LICENSE).
 
 ---
 
-Built by **Nive** — because privacy on Windows shouldn't require a phone.
+Built by **Nivedhaa Sai S** — because privacy on Windows shouldn't require a phone.
